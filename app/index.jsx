@@ -94,14 +94,11 @@ export default function Index() {
 
   /**
    * Fetches joke categories from the API and then fetches jokes for each category
-   * Filters out 'Any' and 'Dark' categories
    */
   const fetchCategories = async () => {
     try {
-      console.group("📋 FETCHING CATEGORIES");
       const response = await fetch(`${JOKE_API_URL}/categories`);
       const data = await response.json();
-      console.log("📥 Raw API Response:", JSON.stringify(data, null, 2));
 
       const formattedCategories = data.categories.map((cat) => ({
         id: cat,
@@ -109,16 +106,10 @@ export default function Index() {
         children: [],
       }));
 
-      console.log(
-        "✨ Formatted Categories:",
-        JSON.stringify(formattedCategories, null, 2)
-      );
-
       // Set initial categories
       setCategories(formattedCategories);
 
       // Fetch jokes for each category
-      console.log("🔄 Fetching initial jokes for all categories...");
       await Promise.all(
         data.categories.map(async (category) => {
           setLoadingJokes((prev) => ({ ...prev, [category]: true }));
@@ -146,16 +137,15 @@ export default function Index() {
               });
             }
           } catch (error) {
-            console.error(`❌ Error fetching jokes for ${category}:`, error);
+            // Keep only error logging
+            console.error(`Error fetching jokes for ${category}:`, error);
           } finally {
             setLoadingJokes((prev) => ({ ...prev, [category]: false }));
           }
         })
       );
-
-      console.groupEnd();
     } catch (error) {
-      console.error("❌ Error fetching categories:", error);
+      console.error("Error fetching categories:", error);
     }
   };
 
@@ -166,12 +156,10 @@ export default function Index() {
   const fetchJokes = async (category) => {
     setLoadingJokes((prev) => ({ ...prev, [category]: true }));
     try {
-      console.group(`🃏 FETCHING JOKES: ${category}`);
       const response = await fetch(
         `${JOKE_API_URL}/joke/${category}?type=single&amount=2`
       );
       const data = await response.json();
-      console.log("📥 API Response:", JSON.stringify(data, null, 2));
 
       if (data.jokes) {
         const categoryIndex = categories.findIndex(
@@ -193,23 +181,11 @@ export default function Index() {
             ...customJokes, // Preserve custom jokes
           ];
 
-          console.log(
-            "📝 Updated Category Data:",
-            JSON.stringify(
-              {
-                category,
-                jokes: updatedCategories[categoryIndex].children,
-              },
-              null,
-              2
-            )
-          );
           setCategories(updatedCategories);
         }
       }
-      console.groupEnd();
     } catch (error) {
-      console.error(`❌ Error fetching jokes for ${category}:`, error);
+      console.error(`Error fetching jokes for ${category}:`, error);
     } finally {
       setLoadingJokes((prev) => ({ ...prev, [category]: false }));
     }
@@ -233,9 +209,13 @@ export default function Index() {
   };
 
   /**
-   * Scrolls the list to the top with animation
+   * Scrolls the list to the top with animation and collapses all expanded sections
    */
   const scrollToTop = () => {
+    // Create a new empty Set to collapse all sections
+    const emptySet = new Set();
+    setExpandedSections(emptySet);
+    // Scroll to top
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
@@ -291,7 +271,6 @@ export default function Index() {
    */
   const handleAddNewItem = () => {
     if (modalInfo.parentId && newItemText.trim()) {
-      console.group("➕ ADDING NEW CUSTOM JOKE");
       const categoryIndex = categories.findIndex(
         (cat) => cat.title === modalInfo.parentId
       );
@@ -303,75 +282,18 @@ export default function Index() {
         };
         updatedCategories[categoryIndex].children.push(newJoke);
 
-        console.log(
-          "🆕 New Joke:",
-          JSON.stringify(
-            {
-              category: modalInfo.parentId,
-              joke: newJoke,
-            },
-            null,
-            2
-          )
-        );
-
         setCategories(updatedCategories);
 
-        setAddedItems((prev) => {
-          const newAddedItems = {
-            ...prev,
-            [modalInfo.parentId]: (prev[modalInfo.parentId] || 0) + 1,
-          };
-          console.log(
-            "🆕 Updated Counter:",
-            JSON.stringify(
-              {
-                category: modalInfo.parentId,
-                totalAdded: newAddedItems[modalInfo.parentId],
-              },
-              null,
-              2
-            )
-          );
-          return newAddedItems;
-        });
+        setAddedItems((prev) => ({
+          ...prev,
+          [modalInfo.parentId]: (prev[modalInfo.parentId] || 0) + 1,
+        }));
 
         setNewItemText("");
         setModalInfo({ visible: false, title: "", type: "display" });
       }
-      console.groupEnd();
     }
   };
-
-  // State change tracking useEffects
-  useEffect(() => {
-    if (categories.length > 0) {
-      console.group("🔄 CATEGORIES STATE UPDATE");
-      console.log(
-        "Current Categories:",
-        JSON.stringify(
-          categories.map((cat) => ({
-            category: cat.title,
-            totalJokes: cat.children.length,
-          })),
-          null,
-          2
-        )
-      );
-      console.groupEnd();
-    }
-  }, [categories]);
-
-  useEffect(() => {
-    if (Object.keys(addedItems).length > 0) {
-      console.group("🔄 ADDED ITEMS STATE UPDATE");
-      console.log(
-        "Custom Jokes Count per Category:",
-        JSON.stringify(addedItems, null, 2)
-      );
-      console.groupEnd();
-    }
-  }, [addedItems]);
 
   return (
     <View style={styles.container}>
